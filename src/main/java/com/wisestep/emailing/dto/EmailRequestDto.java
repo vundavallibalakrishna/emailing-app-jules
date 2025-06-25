@@ -1,24 +1,30 @@
-package com.wisestep.emailing.domain;
+package com.wisestep.emailing.dto;
 
 import java.io.Serializable;
 import java.util.List;
 
-public class Email implements Serializable {
-
+public class EmailRequestDto implements Serializable {
     private String to;
     private String from;
     private String subject;
     private String body;
-    private List<EmailAttachment> attachments;
+    private String provider; // e.g., "sendgrid", "mailgun"
+    private List<AttachmentDto> attachments;
 
-    public Email(String to, String from, String subject, String body, List<EmailAttachment> attachments) {
+    // Constructors
+    public EmailRequestDto() {
+    }
+
+    public EmailRequestDto(String to, String from, String subject, String body, String provider, List<AttachmentDto> attachments) {
         this.to = to;
         this.from = from;
         this.subject = subject;
         this.body = body;
+        this.provider = provider;
         this.attachments = attachments;
     }
 
+    // Getters and Setters
     public String getTo() {
         return to;
     }
@@ -51,12 +57,19 @@ public class Email implements Serializable {
         this.body = body;
     }
 
-    public List<EmailAttachment> getAttachments() {
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
+    public List<AttachmentDto> getAttachments() {
         return attachments;
     }
 
-    public void setAttachments(List<EmailAttachment> attachments) {
+    public void setAttachments(List<AttachmentDto> attachments) {
         this.attachments = attachments;
     }
 }
-
