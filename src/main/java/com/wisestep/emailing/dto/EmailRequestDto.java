@@ -1,14 +1,30 @@
 package com.wisestep.emailing.dto;
 
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
 import java.io.Serializable;
 import java.util.List;
 
 public class EmailRequestDto implements Serializable {
+
+    @NotBlank(message = "Recipient email ('to') cannot be blank.")
+    @Email(message = "Invalid 'to' email format.")
     private String to;
+
+    @NotBlank(message = "Sender email ('from') cannot be blank.")
+    @Email(message = "Invalid 'from' email format.")
     private String from;
+
+    @NotBlank(message = "Subject cannot be blank.")
     private String subject;
+
+    @NotBlank(message = "Body cannot be blank.")
     private String body;
+
+    // Provider can be optional if a default is always assumed by the controller/service
     private String provider; // e.g., "sendgrid", "mailgun"
+
+    // Attachments can be optional
     private List<AttachmentDto> attachments;
 
     // Constructors

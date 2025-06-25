@@ -1,142 +1,161 @@
 package com.wisestep.emailing.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wisestep.emailing.domain.job.EmailJob;
+import com.wisestep.emailing.dto.BulkEmailRequestDto;
 import com.wisestep.emailing.dto.EmailRequestDto;
-import com.wisestep.emailing.dto.EmailResponseDto;
-import com.wisestep.emailing.service.EmailSender;
+import com.wisestep.emailing.service.EmailSchedulingService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(EmailController.class)
+@WebMvcTest(EmailController.class) // Specify the controller to test
 public class EmailControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    // Mock the individual EmailSender beans that would be collected into the Map
-    // Spring Boot's @WebMvcTest will pick these up if they are part of the test configuration
-    // or if they are @MockBean s with specific names.
-    // For simplicity in @WebMvcTest, we often mock the direct dependencies.
-    // Here, the EmailController depends on a Map<String, EmailSender>.
-    // We can provide a @MockBean for each sender implementation that the controller might use.
-
-    @MockBean(name = "sendgrid") // Name must match the @Service("sendgrid") annotation
-    private EmailSender sendGridEmailSenderMock;
-
-    @MockBean(name = "elasticemail") // Example for a future provider
-    private EmailSender elasticEmailSenderMock;
-
-    @MockBean(name = "smtp")
-    private EmailSender smtpEmailSenderMock;
-
-    @MockBean(name = "mailchimp")
-    private EmailSender mailchimpEmailSenderMock;
-
+    @MockBean // Mocks the EmailSchedulingService for this controller test
+    private EmailSchedulingService emailSchedulingService;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private ObjectMapper objectMapper; // For converting objects to JSON
 
     @Test
-    void sendEmail_success_withSendGridProvider() throws Exception {
-        EmailRequestDto requestDto = new EmailRequestDto("to@example.com", "from@example.com", "Subject", "Body", "sendgrid", null);
-        EmailResponseDto successResponse = new EmailResponseDto("Success", "Email sent via SendGrid");
+    void scheduleBulkEmail_success_singleEmail() throws Exception {
+        EmailRequestDto email1 = new EmailRequestDto("to1@example.com", "from@example.com", "Subject 1", "Body 1", "sendgrid", null);
+        BulkEmailRequestDto bulkRequest = new BulkEmailRequestDto(Collections.singletonList(email1));
 
-        when(sendGridEmailSenderMock.sendEmail(any(EmailRequestDto.class))).thenReturn(successResponse);
+        EmailJob mockJob1 = new EmailJob();
+        mockJob1.setId(1L);
+        when(emailSchedulingService.scheduleEmailJob(any(EmailRequestDto.class))).thenReturn(mockJob1);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/email/send")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
+                        .content(objectMapper.writeValueAsString(bulkRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("Success"))
-                .andExpect(jsonPath("$.message").value("Email sent via SendGrid"));
+                .andExpect(jsonPath("$.message").value("1 email(s) scheduled successfully."))
+                .andExpect(jsonPath("$.jobIds", hasSize(1)))
+                .andExpect(jsonPath("$.jobIds[0]").value(1));
     }
 
     @Test
-    void sendEmail_success_withDefaultProvider ( ) throws Exception {
-        // Default provider is "sendgrid" as per EmailController logic
-        EmailRequestDto requestDto = new EmailRequestDto("to@example.com", "from@example.com", "Subject", "Body", null, null); // Provider is null
-        EmailResponseDto successResponse = new EmailResponseDto("Success", "Email sent via SendGrid (default)");
+    void scheduleBulkEmail_success_multipleEmails() throws Exception {
+        EmailRequestDto email1 = new EmailRequestDto("to1@example.com", "from@example.com", "Subject 1", "Body 1", "sendgrid", null);
+        EmailRequestDto email2 = new EmailRequestDto("to2@example.com", "from@example.com", "Subject 2", "Body 2", "smtp", null);
+        BulkEmailRequestDto bulkRequest = new BulkEmailRequestDto(Arrays.asList(email1, email2));
 
-        when(sendGridEmailSenderMock.sendEmail(any(EmailRequestDto.class))).thenReturn(successResponse);
+        EmailJob mockJob1 = new EmailJob(); mockJob1.setId(1L);
+        EmailJob mockJob2 = new EmailJob(); mockJob2.setId(2L);
+
+        // Make sure the mock returns different IDs for different inputs if necessary,
+        // or use thenAnswer for more complex mock logic.
+        // For this test, if it's called twice, it will return mockJob1 then mockJob2.
+        when(emailSchedulingService.scheduleEmailJob(email1)).thenReturn(mockJob1);
+        when(emailSchedulingService.scheduleEmailJob(email2)).thenReturn(mockJob2);
+
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/email/send")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
+                        .content(objectMapper.writeValueAsString(bulkRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("Success"))
-                .andExpect(jsonPath("$.message").value("Email sent via SendGrid (default)"));
+                .andExpect(jsonPath("$.message").value("2 email(s) scheduled successfully."))
+                .andExpect(jsonPath("$.jobIds", hasSize(2)))
+                .andExpect(jsonPath("$.jobIds", containsInAnyOrder(1, 2))); // Order might not be guaranteed
     }
 
     @Test
-    void sendEmail_success_withElasticEmailProvider() throws Exception {
-        EmailRequestDto requestDto = new EmailRequestDto("to@example.com", "from@example.com", "Subject", "Body", "elasticemail", null);
-        EmailResponseDto successResponse = new EmailResponseDto("Success", "Email sent via Elastic Email");
-
-        when(elasticEmailSenderMock.sendEmail(any(EmailRequestDto.class))).thenReturn(successResponse);
+    void scheduleBulkEmail_emptyRequest() throws Exception {
+        BulkEmailRequestDto emptyRequest = new BulkEmailRequestDto(Collections.emptyList());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/email/send")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("Success"))
-                .andExpect(jsonPath("$.message").value("Email sent via Elastic Email"));
-    }
-
-
-    @Test
-    void sendEmail_providerNotSupported() throws Exception {
-        EmailRequestDto requestDto = new EmailRequestDto("to@example.com", "from@example.com", "Subject", "Body", "unsupportedProvider", null);
-        // No mock is set up for "unsupportedProvider", so the map in controller will return null for it.
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/email/send")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
+                        .content(objectMapper.writeValueAsString(emptyRequest)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value("Error"))
-                .andExpect(jsonPath("$.message").value("Unsupported or unconfigured email provider: unsupportedprovider"));
+                .andExpect(jsonPath("$.message").value("Request must contain at least one email."));
     }
 
     @Test
-    void sendEmail_serviceReturnsError() throws Exception {
-        EmailRequestDto requestDto = new EmailRequestDto("to@example.com", "from@example.com", "Subject", "Body", "sendgrid", null);
-        EmailResponseDto errorResponse = new EmailResponseDto("Error", "SendGrid API failed");
-
-        when(sendGridEmailSenderMock.sendEmail(any(EmailRequestDto.class))).thenReturn(errorResponse);
+    void scheduleBulkEmail_nullEmailList() throws Exception {
+        BulkEmailRequestDto nullListRequest = new BulkEmailRequestDto(null);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/email/send")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.status").value("Error"))
-                .andExpect(jsonPath("$.message").value("SendGrid API failed"));
+                        .content(objectMapper.writeValueAsString(nullListRequest)))
+                .andExpect(status().isBadRequest())
+                 //This response comes from @Valid on BulkEmailRequestDto.emails if @NotNull is there
+                .andExpect(jsonPath("$.message").value("Request must contain at least one email."));
+    }
+
+
+    @Test
+    void scheduleBulkEmail_partialFailure() throws Exception {
+        EmailRequestDto email1 = new EmailRequestDto("to1@example.com", "from@example.com", "Subject 1", "Body 1", "sendgrid", null);
+        EmailRequestDto email2 = new EmailRequestDto("to2@example.com", "from@example.com", "Subject 2", "Body 2", "smtp", null); // This one will fail
+        BulkEmailRequestDto bulkRequest = new BulkEmailRequestDto(Arrays.asList(email1, email2));
+
+        EmailJob mockJob1 = new EmailJob(); mockJob1.setId(1L);
+        when(emailSchedulingService.scheduleEmailJob(email1)).thenReturn(mockJob1);
+        when(emailSchedulingService.scheduleEmailJob(email2)).thenThrow(new RuntimeException("SMTP server down"));
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/email/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bulkRequest)))
+                .andExpect(status().isMultiStatus()) // 207
+                .andExpect(jsonPath("$.message").value("1 email(s) scheduled successfully. 1 email(s) failed to schedule. Errors: Failed to schedule for to2@example.com: SMTP server down"))
+                .andExpect(jsonPath("$.jobIds", hasSize(1)))
+                .andExpect(jsonPath("$.jobIds[0]").value(1));
     }
 
     @Test
-    void sendEmail_serviceThrowsException() throws Exception {
-        EmailRequestDto requestDto = new EmailRequestDto("to@example.com", "from@example.com", "Subject", "Body", "sendgrid", null);
+    void scheduleBulkEmail_totalFailure() throws Exception {
+        EmailRequestDto email1 = new EmailRequestDto("to1@example.com", "from@example.com", "Subject 1", "Body 1", "sendgrid", null);
+        BulkEmailRequestDto bulkRequest = new BulkEmailRequestDto(Collections.singletonList(email1));
 
-        when(sendGridEmailSenderMock.sendEmail(any(EmailRequestDto.class))).thenThrow(new RuntimeException("Unexpected service error"));
+        when(emailSchedulingService.scheduleEmailJob(any(EmailRequestDto.class))).thenThrow(new RuntimeException("DB connection failed"));
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/email/send")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
+                        .content(objectMapper.writeValueAsString(bulkRequest)))
                 .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.status").value("Error"))
-                .andExpect(jsonPath("$.message").value("An unexpected error occurred with provider sendgrid: Unexpected service error"));
+                .andExpect(jsonPath("$.message").value("All email jobs failed to schedule. Errors: Failed to schedule for to1@example.com: DB connection failed"))
+                .andExpect(jsonPath("$.jobIds", hasSize(0)));
     }
+
+    // Test for @Valid annotations on EmailRequestDto within BulkEmailRequestDto
+    @Test
+    void scheduleBulkEmail_invalidEmailInList() throws Exception {
+        // EmailRequestDto now has @NotBlank and @Email annotations
+        EmailRequestDto invalidEmail = new EmailRequestDto("invalid-email", "", null, "Body", "sendgrid", null); // Invalid 'to', blank 'from', null 'subject'
+        BulkEmailRequestDto bulkRequest = new BulkEmailRequestDto(Collections.singletonList(invalidEmail));
+
+        // Spring's @Valid will trigger MethodArgumentNotValidException before controller logic is hit in this way for DTOs
+        // The actual error message structure might depend on global exception handling.
+        // For @WebMvcTest, it often returns a more generic 400 or specific field errors if ExceptionHandlers are in place.
+        // Without specific @ControllerAdvice, it might be a generic 400.
+        // Let's assume default behavior where field errors are somewhat indicated.
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/email/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bulkRequest)))
+                .andExpect(status().isBadRequest()); // Expecting 400 due to validation failures
+                // Asserting specific error messages from validation can be tricky as format varies.
+                // e.g. .andExpect(jsonPath("$.errors[?(@.field == 'emails[0].to')].defaultMessage").value("Invalid 'to' email format."))
+                // This depends on how your application serializes BindingResult errors.
+    }
+
 }
