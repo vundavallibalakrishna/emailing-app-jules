@@ -99,18 +99,16 @@ public class EmailSendingJob implements Job {
 
             if ("Success".equals(response.getStatus())) {
                 emailJob.setStatus(EmailJobStatus.SENT);
-                // Try to extract messageId if present in the success message (this is a bit fragile)
-                if (response.getMessage() != null && response.getMessage().contains("Message ID: ")) {
-                    emailJob.setMessageId(response.getMessage().substring(response.getMessage().indexOf("Message ID: ") + "Message ID: ".length()));
-                } else {
-                     emailJob.setMessageId(response.getMessage()); // Store the whole message if no specific ID pattern
-                }
+                emailJob.setMessageId(response.getProviderMessageId()); // Use the dedicated field
                 emailJob.setErrorMessage(null);
-                logger.info("EmailJob ID {} processed successfully. Status: SENT. Provider Message: {}", emailJobId, response.getMessage());
+                logger.info("EmailJob ID {} processed successfully. Status: SENT. Provider Message ID: {}, Provider Message: {}",
+                            emailJobId, response.getProviderMessageId(), response.getMessage());
             } else {
                 emailJob.setStatus(EmailJobStatus.FAILED);
                 emailJob.setErrorMessage(response.getMessage());
-                logger.error("EmailJob ID {} failed. Status: FAILED. Error: {}", emailJobId, response.getMessage());
+                emailJob.setMessageId(response.getProviderMessageId()); // Store provider ID even on failure, if available
+                logger.error("EmailJob ID {} failed. Status: FAILED. Provider Message ID: {}, Error: {}",
+                            emailJobId, response.getProviderMessageId(), response.getMessage());
             }
         } catch (Exception e) {
             logger.error("Exception during EmailSendingJob execution for job ID {}: {}", emailJobId, e.getMessage(), e);

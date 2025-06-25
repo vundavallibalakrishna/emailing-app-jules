@@ -94,13 +94,13 @@ public class ElasticEmailSender implements EmailSender {
 
             if (response != null && response.transactionID != null && !response.transactionID.isEmpty()) {
                 logger.info("Email sent successfully via Elastic Email. Transaction ID: {}", response.transactionID);
-                return new EmailResponseDto("Success", "Email sent successfully via Elastic Email. Transaction ID: " + response.transactionID);
+                return new EmailResponseDto("Success", "Email sent successfully via Elastic Email. Transaction ID: " + response.transactionID, response.transactionID);
             } else {
                 // The SDK might throw an exception for errors, or return a null/empty response.
                 // It's better to check their documentation for specific error handling.
                 // Assuming if transactionID is missing, it's an error.
                 logger.error("Failed to send email via Elastic Email. Response: {}", response != null ? response.toString() : "null");
-                return new EmailResponseDto("Error", "Failed to send email via Elastic Email. Response details: " + (response != null ? response.toString() : "null"));
+                return new EmailResponseDto("Error", "Failed to send email via Elastic Email. Response details: " + (response != null ? response.toString() : "null"), null);
             }
 
         } catch (Exception e) {

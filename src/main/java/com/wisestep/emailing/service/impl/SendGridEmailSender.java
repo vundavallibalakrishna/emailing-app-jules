@@ -69,12 +69,17 @@ public class SendGridEmailSender implements EmailSender {
             logger.info("SendGrid response status code: {}", response.getStatusCode());
             logger.info("SendGrid response body: {}", response.getBody());
             logger.info("SendGrid response headers: {}", response.getHeaders());
+            String sendGridMessageId = response.getHeaders() != null ? response.getHeaders().get("X-Message-Id") : null;
 
             if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-                return new EmailResponseDto("Success", "Email sent successfully via SendGrid. Message ID: " + response.getHeaders().get("X-Message-Id"));
+                String successMessage = "Email sent successfully via SendGrid.";
+                if (sendGridMessageId != null && !sendGridMessageId.isEmpty()) {
+                    successMessage += " Message ID: " + sendGridMessageId;
+                }
+                return new EmailResponseDto("Success", successMessage, sendGridMessageId);
             } else {
                 logger.error("Error sending email via SendGrid. Status: {}, Body: {}", response.getStatusCode(), response.getBody());
-                return new EmailResponseDto("Error", "Failed to send email via SendGrid. Status: " + response.getStatusCode() + ", Body: " + response.getBody());
+                return new EmailResponseDto("Error", "Failed to send email via SendGrid. Status: " + response.getStatusCode() + ", Body: " + response.getBody(), sendGridMessageId);
             }
         } catch (IOException ex) {
             logger.error("Error sending email via SendGrid", ex);

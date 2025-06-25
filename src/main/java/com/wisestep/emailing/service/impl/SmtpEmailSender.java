@@ -50,14 +50,14 @@ public class SmtpEmailSender implements EmailSender {
             javaMailSender.send(mimeMessage);
             logger.info("Email sent successfully via SMTP to {}", requestDto.getTo());
             // SMTP doesn't typically return a message ID in the same way as API services
-            return new EmailResponseDto("Success", "Email sent successfully via SMTP.");
+            return new EmailResponseDto("Success", "Email sent successfully via SMTP.", null); // No provider message ID for SMTP
 
         } catch (MessagingException e) {
             logger.error("Error sending email via SMTP", e);
-            return new EmailResponseDto("Error", "MessagingException while sending email via SMTP: " + e.getMessage());
+            return new EmailResponseDto("Error", "MessagingException while sending email via SMTP: " + e.getMessage(), null);
         } catch (Exception e) {
             logger.error("Unexpected error sending email via SMTP", e);
-            return new EmailResponseDto("Error", "Unexpected error while sending email via SMTP: " + e.getMessage());
+            return new EmailResponseDto("Error", "Unexpected error while sending email via SMTP: " + e.getMessage(), null);
         }
     }
 }

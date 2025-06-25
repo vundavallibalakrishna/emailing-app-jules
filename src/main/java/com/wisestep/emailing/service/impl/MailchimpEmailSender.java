@@ -95,15 +95,15 @@ public class MailchimpEmailSender implements EmailSender {
                 logger.info("Mailchimp send response. Status: {}, ID: {}, Email: {}", status, messageId, firstResponse.getEmail());
 
                 if ("sent".equalsIgnoreCase(status) || "queued".equalsIgnoreCase(status) || "scheduled".equalsIgnoreCase(status)) {
-                    return new EmailResponseDto("Success", "Email " + status + " successfully via Mailchimp. Message ID: " + messageId);
+                    return new EmailResponseDto("Success", "Email " + status + " successfully via Mailchimp. Message ID: " + messageId, messageId);
                 } else {
                     String rejectReason = firstResponse.getRejectReason();
                     logger.error("Failed to send email via Mailchimp. Status: {}, Reason: {}", status, rejectReason);
-                    return new EmailResponseDto("Error", "Failed to send email via Mailchimp. Status: " + status + (rejectReason != null ? ", Reason: " + rejectReason : ""));
+                    return new EmailResponseDto("Error", "Failed to send email via Mailchimp. Status: " + status + (rejectReason != null ? ", Reason: " + rejectReason : ""), messageId); // messageId might be null if rejected early
                 }
             } else {
                 logger.error("Failed to send email via Mailchimp. No response from API.");
-                return new EmailResponseDto("Error", "Failed to send email via Mailchimp. No response from API.");
+                return new EmailResponseDto("Error", "Failed to send email via Mailchimp. No response from API.", null);
             }
 
         } catch (IOException e) { // The SDK's send method throws IOException
