@@ -467,6 +467,20 @@
       <version>4.9.3</version>
     </dependency>
 
+    <!-- Elastic Email -->
+    <dependency>
+      <groupId>com.elasticemail</groupId>
+      <artifactId>elasticemail-java</artifactId>
+      <version>4.0.24</version>
+    </dependency>
+
+    <!-- Mailchimp Transactional (Mandrill) -->
+    <dependency>
+      <groupId>com.mailchimp</groupId>
+      <artifactId>mailchimp-transactional-java</artifactId>
+      <version>1.0.55</version>
+    </dependency>
+
     <!-- SparkPost -->
     <dependency>
       <groupId>com.sparkpost</groupId>
