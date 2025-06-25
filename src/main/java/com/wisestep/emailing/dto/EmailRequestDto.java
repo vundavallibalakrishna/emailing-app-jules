@@ -27,6 +27,8 @@ public class EmailRequestDto implements Serializable {
     // Attachments can be optional
     private List<AttachmentDto> attachments;
 
+    private String userId; // Optional: Application-specific User ID, for linking UserEmailAccount
+
     // Constructors
     public EmailRequestDto() {
     }
@@ -41,6 +43,14 @@ public class EmailRequestDto implements Serializable {
     }
 
     // Getters and Setters
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
     public String getTo() {
         return to;
     }

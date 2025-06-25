@@ -45,6 +45,8 @@ public class EmailJob {
 
     private String messageId; // From email provider, if available
 
+    private String userId; // Link to the application's internal user ID
+
     // Getters and Setters
     public Long getId() {
         return id;
@@ -140,6 +142,14 @@ public class EmailJob {
 
     public void setMessageId(String messageId) {
         this.messageId = messageId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     @PrePersist

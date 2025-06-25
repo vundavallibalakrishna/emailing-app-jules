@@ -86,6 +86,7 @@ public class EmailSendingJob implements Job {
                     emailJob.getProvider(),
                     attachments
             );
+            emailRequest.setUserId(emailJob.getUserId()); // Pass userId to the request DTO
 
             String providerKey = emailJob.getProvider() != null ? emailJob.getProvider().toLowerCase() : DEFAULT_PROVIDER_KEY;
             EmailSender emailSender = emailSenders.get(providerKey);

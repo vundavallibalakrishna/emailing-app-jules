@@ -44,6 +44,7 @@ public class EmailSchedulingService {
         emailJob.setSubject(requestDto.getSubject());
         emailJob.setBody(requestDto.getBody());
         emailJob.setProvider(requestDto.getProvider() != null ? requestDto.getProvider().toLowerCase() : "sendgrid"); // Default provider
+        emailJob.setUserId(requestDto.getUserId()); // Populate userId
         emailJob.setStatus(EmailJobStatus.SCHEDULED);
 
         if (requestDto.getAttachments() != null && !requestDto.getAttachments().isEmpty()) {
